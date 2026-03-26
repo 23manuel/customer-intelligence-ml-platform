@@ -30,6 +30,4 @@ Project Structure (The 6 Epics)
   *   Optimization: Segmented "Specialist Agent" deployment.
 
 
-Intellectual Property Notice
-Copyright © 2026 Emmanuel Okon.
-This repository contains proprietary business logic and architectural designs. Access is strictly for auditing and recruitment review. Unauthorized distribution or replication of the "Washh Engine" is prohibited.
+

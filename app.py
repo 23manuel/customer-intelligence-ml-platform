@@ -1,30 +1,29 @@
-
 import streamlit as st
 import pandas as pd
 import joblib
-import xgboost as xgb
 import os
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Customer Intelligence OS", page_icon="⚡", layout="wide")
 
 st.title("⚡ Customer Intelligence & LTV Radar")
-st.markdown("A production-grade ML pipeline that segments users and routes them to specialist XGBoost agents for accurate Lifetime Value (LTV) forecasting.")
+st.markdown(
+    "A production-grade ML pipeline that segments users and routes them to specialist XGBoost agents for accurate Lifetime Value (LTV) forecasting."
+)
 
 # --- LOAD MODELS (Cached for speed) ---
 @st.cache_resource
 def load_models():
-    # Ensure your .pkl files are in a folder named 'models' or in the same directory
-    base_path = "" # Change this if your models are in a subfolder, e.g., "models/"
-    
-    scaler = joblib.load(base_path + 'feature_scaler.pkl')
-    kmeans = joblib.load(base_path + 'kmeans_segmenter.pkl')
-    
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+    scaler = joblib.load(os.path.join(BASE_DIR, "feature_scaler.pkl"))
+    kmeans = joblib.load(os.path.join(BASE_DIR, "kmeans_segmenter.pkl"))
+
     agents = {
-        0: joblib.load(base_path + 'clv_agent_0.pkl'),
-        1: joblib.load(base_path + 'clv_agent_1.pkl'),
-        2: joblib.load(base_path + 'clv_agent_2.pkl'),
-        3: joblib.load(base_path + 'clv_agent_3.pkl')
+        0: joblib.load(os.path.join(BASE_DIR, "clv_agent_0.pkl")),
+        1: joblib.load(os.path.join(BASE_DIR, "clv_agent_1.pkl")),
+        2: joblib.load(os.path.join(BASE_DIR, "clv_agent_2.pkl")),
+        3: joblib.load(os.path.join(BASE_DIR, "clv_agent_3.pkl")),
     }
     return scaler, kmeans, agents
 
@@ -53,54 +52,57 @@ account_lifespan_days = st.sidebar.number_input("Account Lifespan (Days)", min_v
 # --- PREDICTION LOGIC ---
 if st.sidebar.button("Run Intelligence Engine 🚀"):
     with st.spinner("Processing through ML Pipeline..."):
-        
-        # 1. Prepare data for Segmentation (Epic 4 features)
+
+        # 1. Prepare data for Segmentation
         segment_features = pd.DataFrame([[
             current_total_spent, num_transactions, avg_days_between_txns, total_credit_limit
-        ]], columns=['total_spent', 'num_transactions', 'avg_days_between_txns', 'total_credit_limit'])
-        
-        # Scale and Predict Segment (FIXED: added inside the int)
+        ]], columns=["total_spent", "num_transactions", "avg_days_between_txns", "total_credit_limit"])
+
         scaled_features = scaler.transform(segment_features)
-        cluster_id = int(kmeans.predict(scaled_features))
-        
-        # Define Persona Names based on your Epic 4 findings
+        cluster_id = int(kmeans.predict(scaled_features)[0])
+
         personas = {
             0: "Casual User (Low Spend/Low Frequency)",
             1: "High Credit User (Premium Target)",
             2: "Regular User (Core Base)",
             3: "Volume Whale (High Spend/High Frequency)"
         }
-        
-        # 2. Prepare data for the Specialist Agent (Epic 6 features)
+
+        persona = personas.get(cluster_id, "Unknown Segment")
+
+        # 2. Prepare data for the Specialist Agent
         clv_features = pd.DataFrame([[
             yearly_income, total_debt, credit_score, total_credit_limit, current_age,
             num_transactions, avg_days_between_txns, account_lifespan_days
         ]], columns=[
-            'yearly_income', 'total_debt', 'credit_score', 'total_credit_limit', 'current_age',
-            'num_transactions', 'avg_days_between_txns', 'account_lifespan_days'
+            "yearly_income", "total_debt", "credit_score", "total_credit_limit", "current_age",
+            "num_transactions", "avg_days_between_txns", "account_lifespan_days"
         ])
-        
-        # Route to the correct XGBoost Agent (FIXED: added at the end)
-        specialist_agent = agents[cluster_id]
-        predicted_ltv = specialist_agent.predict(clv_features)
-        
+
+        specialist_agent = agents.get(cluster_id)
+        if specialist_agent is None:
+            st.error(f"No specialist agent found for cluster {cluster_id}.")
+            st.stop()
+
+        predicted_ltv = float(specialist_agent.predict(clv_features)[0])
+
         # --- DISPLAY RESULTS ---
         st.success("Analysis Complete.")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             st.metric(label="Predicted Behavioral Segment", value=f"Cluster {cluster_id}")
-            st.info(f"**Persona:** {personas[cluster_id]}")
-            
+            st.info(f"**Persona:** {persona}")
+
         with col2:
             st.metric(label="Forecasted Lifetime Value (LTV)", value=f"${predicted_ltv:,.2f}")
-            st.warning("Routed via Agent " + str(cluster_id) + " for segment-specific accuracy.")
-            
+            st.warning(f"Routed via Agent {cluster_id} for segment-specific accuracy.")
+
         st.divider()
         st.markdown("""
         ### How this works under the hood:
         1. **Data Ingestion:** Captures raw financial and behavioral telemetry.
         2. **K-Means Routing:** Evaluates spending velocity and routes the user to 1 of 4 specialized profiles.
-        3. **XGBoost Specialist Agents:** Instead of a general, inaccurate model, a dedicated XGBoost model trained *only* on similar users forecasts the final LTV.
+        3. **XGBoost Specialist Agents:** A dedicated model trained on similar users forecasts the final LTV.
         """)

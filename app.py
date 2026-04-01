@@ -58,7 +58,7 @@ if st.sidebar.button("Run Intelligence Engine 🚀"):
         ]], columns=["total_spent", "num_transactions", "avg_days_between_txns", "total_credit_limit"])
 
         scaled_features = scaler.transform(segment_features)
-        cluster_id = int(kmeans.predict(scaled_features))
+        cluster_id = int(kmeans.predict(scaled_features)[0])
         persona = persona_map.get(cluster_id, "Unknown Segment")
 
         # 2. Specialist Agent (XGBoost)

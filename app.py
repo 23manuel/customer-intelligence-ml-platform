@@ -15,7 +15,7 @@ st.markdown("A production-grade ML pipeline that segments users and routes them 
 @st.cache_resource
 def load_models_and_metadata():
     # Point directly to the NEW artifacts folder
-    BASE_DIR = '/content/drive/MyDrive/bank_churn_dataset/artifacts/'
+    BASE_DIR = os.path.join(os.path.dirname(__file__), 'artifacts')
     
     scaler = joblib.load(os.path.join(BASE_DIR, 'feature_scaler.pkl'))
     kmeans = joblib.load(os.path.join(BASE_DIR, 'kmeans_segmenter.pkl'))

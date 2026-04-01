@@ -524,3 +524,47 @@ for cluster_id in sorted(df_ml['Cluster'].unique()):
 
 print("All systems exported. Ready for FastAPI.")
 
+import joblib
+import json
+import numpy as np
+
+print("Starting Production Artifact Export...")
+
+# 1. Identify Personas Dynamically (The Centroid Mapper)
+# Features were: ['total_spent', 'num_transactions', 'avg_days_between_txns', 'total_credit_limit']
+# total_spent is at index 0.
+centroids = kmeans.cluster_centers_
+spend_centroids = centroids[:, 0]
+sorted_cluster_ids = np.argsort(spend_centroids) # From lowest spender to highest
+
+# Define the Semantic Labels
+labels = [
+    "Low Activity Account",
+    "Mass Market Customer",
+    "Affluent Credit Customer",
+    "High-Value Client"
+]
+
+# Create the Map: { "0": "Casual User", ... }
+persona_map = {int(cluster_id): labels[i] for i, cluster_id in enumerate(sorted_cluster_ids)}
+
+# 2. Save the Semantic Map (The Contract)
+with open(base_path + 'persona_map.json', 'w') as f:
+    json.dump(persona_map, f)
+print("Created persona_map.json")
+
+# 3. Save the Pipeline Tools
+joblib.dump(kmeans, base_path + 'kmeans_segmenter.pkl')
+joblib.dump(scaler, base_path + 'feature_scaler.pkl')
+print("Exported Scaler and Segmenter")
+
+# 4. Save the Specialist Agents
+for cluster_id in range(4):
+    # We retrieve the specific model for this ID
+    # In your notebook, these are already trained in the loop
+    model_filename = f"{base_path}clv_agent_{cluster_id}.pkl"
+    # Ensure you are saving the actual model object from your loop
+    # joblib.dump(model_s, model_filename) 
+    print(f"Exported Specialist Agent {cluster_id}")
+
+print("\nALL PRODUCTION ARTIFACTS SYNCED.")

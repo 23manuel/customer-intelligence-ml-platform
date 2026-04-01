@@ -61,7 +61,7 @@ if st.sidebar.button("Run Intelligence Engine 🚀"):
         ]], columns=["total_spent", "num_transactions", "avg_days_between_txns", "total_credit_limit"])
 
         scaled_features = scaler.transform(segment_features)
-        cluster_id = int(kmeans.predict(scaled_features))
+        cluster_id = int(kmeans.predict(scaled_features)[0])
 
         # THE FIX: Read directly from the JSON map, no hardcoded dictionaries!
         persona = persona_map.get(cluster_id, "Unknown Segment")
@@ -80,7 +80,7 @@ if st.sidebar.button("Run Intelligence Engine 🚀"):
             st.error(f"No specialist agent found for cluster {cluster_id}.")
             st.stop()
 
-        predicted_ltv = float(specialist_agent.predict(clv_features))
+        predicted_ltv = float(specialist_agent.predict(clv_features)[0])
 
         # --- DISPLAY RESULTS ---
         st.success("Analysis Complete.")
